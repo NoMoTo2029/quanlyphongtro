@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý phòng trọ 166/41/C2 Thích Quảng Đức, Đức Nhuận, TPHCM</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #007bff; text-align: center; }
+        .nav-bar { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        button { padding: 10px 18px; margin: 5px; border: none; background: #007bff; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #0056b3; transform: translateY(-1px); }
+        .delete { background: #dc3545; }
+        .delete:hover { background: #a71d2a; }
+        .input-group { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e9ecef; }
+        input, select { padding: 10px; margin: 5px; border: 1px solid #ced4da; border-radius: 5px; width: 180px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: center; }
+        th { background: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        .page { display: none; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .total-cell { font-weight: bold; color: #28a745; font-size: 1.1em; }
+        #guestTable input{
+           width:100%;
+          box-sizing:border-box;
+                }
+        #guestTable td{
+         min-width:120px;}
+
+         #guestTable td:first-child{
+width:70px;
+font-weight:bold;
+}
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>PHÒNG TRỌ 166/41/C2 THÍCH QUẢNG ĐỨC, ĐỨC NHUẬN, TPHCM</h1>
+    
+    <div class="nav-bar">
+        <button onclick="showPage(1)">🏠 Khởi tạo phòng</button>
+        <button onclick="showPage(2)">💰 Tính tiền tháng</button>
+        <button onclick="showPage(3)">👤 Quản lý người ở</button>
+    </div>
+
+    <div id="page1" class="page">
+        <h2>Thiết lập phòng mới</h2>
+        <div class="input-group">
+            <input id="room" placeholder="Số phòng (VD: 101)">
+            <input id="tenant" placeholder="Tên khách thuê">
+            <input id="people" type="number" placeholder="Số người ở">
+            <input id="phone" placeholder="Số điện thoại">
+            <input type="date" id="date">
+            <input id="electricStart" type="number" placeholder="Số điện ban đầu">
+            <input id="price" type="number" placeholder="Giá thuê/tháng">
+            <button onclick="addRoom()" style="background: #28a745;">+ Thêm phòng</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Phòng</th>
+                    <th>Khách thuê</th>
+                    <th>Người</th>
+                    <th>Giá thuê</th>
+                    <th>SĐT</th>
+                    <th>Ngày vào</th>
+                    <th>Chỉ số điện đầu</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="roomTable"></tbody>
+        </table>
+    </div>
+
+    <div id="page2" class="page">
+        <h2>Tính tiền hàng tháng</h2>
+        <button onclick="exportBills()" style="background:#28a745">📊 Xuất Excel</button>
+        <div class="input-group">
+            <input id="month" placeholder="Tháng (VD: 03/2026)">
+            <select id="roomBill" onchange="autoFillStart()">
+                <option value="">-- Chọn phòng --</option>
+            </select>
+            <input id="start" type="number" placeholder="Số điện đầu"> 
+            <input id="end" type="number" placeholder="Số điện cuối">
+            <button onclick="addBill()" style="background: #28a745;">⚡ Tính & Lưu hóa đơn</button>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Bộ lọc:</strong>
+            <input id="filterRoom" placeholder="Lọc số phòng..." onkeyup="renderBills()">
+            <input id="filterMonth" placeholder="Lọc theo tháng..." onkeyup="renderBills()">
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Tháng</th>
+                    <th>Phòng</th>
+                    <th>Khách</th>
+                    <th>Tiền phòng</th>
+                    <th>Điện (Đầu-Cuối)</th>
+                    <th>Tiền điện (3.5k)</th>
+                    <th>Nước (100k/ng)</th>
+                    <th>Dịch vụ</th>
+                    <th>Tổng cộng</th>
+                    <th>Xóa</th>
+                </tr>
+            </thead>
+            <tbody id="billTable"></tbody>
+        </table>
+    </div>
+
+    <div id="page3" class="page">
+        <h2>Thông tin chi tiết người ở</h2>
+        <button onclick="exportGuests()" style="background:#28a745">📊 Xuất Excel</button>
+        <div class="input-group">
+            <input id="roomGuest" placeholder="Nhập số phòng">
+            <button onclick="loadGuests()">🔍 Tìm theo phòng</button>
+            <button onclick="renderAllGuests()" style="background: #6c757d;">📋 Hiện tất cả</button>
+            <button onclick="saveGuests()" style="background:#28a745">💾 Lưu thông tin</button>
+          </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Phòng</th>
+                    <th>Họ và Tên</th>
+                    <th>Ngày sinh</th>
+                    <th>Số CCCD</th>
+                    <th>Địa chỉ thường trú</th>
+                    <th>SĐT liên lạc</th>
+                    <th>Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody id="guestTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 1. Khởi tạo dữ liệu
+    let rooms = JSON.parse(localStorage.getItem("rooms")) || [];
+    let bills = JSON.parse(localStorage.getItem("bills")) || [];
+    let guests = JSON.parse(localStorage.getItem("guests")) || [];
+
+    // 2. Hàm lưu dữ liệu
+    function save() {
+        localStorage.setItem("rooms", JSON.stringify(rooms));
+        localStorage.setItem("bills", JSON.stringify(bills));
+        localStorage.setItem("guests", JSON.stringify(guests));
+    }
+
+    // 3. Hàm chuyển trang
+    function showPage(p) {
+        const pages = document.querySelectorAll('.page');
+        pages.forEach(page => page.style.display = 'none');
+        
+        const targetPage = document.getElementById("page" + p);
+        if (targetPage) {
+            targetPage.style.display = "block";
+        }
+
+        if (p == 1) renderRooms();
+        if (p == 2) { 
+            loadRoomDropdown(); 
+            renderBills(); 
+        }
+        if (p == 3) renderAllGuests();
+    }
+
+    // --- LOGIC TRANG 1 ---
+    function addRoom() {
+        const roomNo = document.getElementById("room").value.trim();
+        const tenant = document.getElementById("tenant").value.trim();
+        const price = document.getElementById("price").value;
+
+        if (!roomNo || !tenant || !price) {
+            alert("Vui lòng nhập ít nhất: Số phòng, Tên khách và Giá phòng");
+            return;
+        }
+
+        if (rooms.some(r => r.room.toString() === roomNo.toString())) {
+            alert("Số phòng này đã tồn tại trên hệ thống!");
+            return;
+        }
+
+        const newRoom = {
+            room: roomNo,
+            tenant: tenant,
+            people: Number(document.getElementById("people").value) || 0,
+            phone: document.getElementById("phone").value,
+            date: document.getElementById("date").value,
+            electricStart: Number(document.getElementById("electricStart").value) || 0,
+            price: Number(price) || 0
+        };
+
+        rooms.push(newRoom);
+        save();
+        renderRooms();
+        // Reset form
+        document.getElementById("room").value = "";
+        document.getElementById("tenant").value = "";
+document.getElementById("people").value="";
+document.getElementById("phone").value="";
+document.getElementById("date").value="";
+document.getElementById("electricStart").value="";
+document.getElementById("price").value="";
+    }
+
+function renderRooms() {
+
+    // sắp xếp theo số phòng
+    let sortedRooms = [...rooms].sort((a,b)=>
+        Number(a.room) - Number(b.room)
+    );
+
+    let html = "";
+
+    sortedRooms.forEach((r,i) => {
+        html += `<tr>
+            <td><strong>${r.room}</strong></td>
+            <td>${r.tenant}</td>
+            <td>${r.people}</td>
+            <td>${r.price.toLocaleString()}đ</td>
+            <td>${r.phone}</td>
+            <td>${r.date}</td>
+            <td>${r.electricStart}</td>
+            <td><button class="delete" onclick="deleteRoom('${r.room}')">Xóa</button></td>
+        </tr>`;
+    });
+
+    document.getElementById("roomTable").innerHTML = html;
+}
+
+   function deleteRoom(roomNo) {
+
+    if(confirm("Xóa phòng sẽ xóa toàn bộ lịch sử hóa đơn liên quan?")) {
+
+        // xóa hóa đơn
+        bills = bills.filter(b => b.room.toString() !== roomNo.toString());
+
+        // xóa phòng
+        rooms = rooms.filter(r => r.room.toString() !== roomNo.toString());
+
+        save();
+        renderRooms();
+        renderBills();
+    }
+
+} 
+
+    // --- LOGIC TRANG 2 ---
+    function loadRoomDropdown() {
+        const select = document.getElementById("roomBill");
+        select.innerHTML = '<option value="">-- Chọn phòng --</option>';
+        rooms.forEach(r => {
+            const opt = document.createElement("option");
+            opt.value = r.room;
+            opt.textContent = `Phòng ${r.room} - ${r.tenant}`;
+            select.appendChild(opt);
+        });
+    }
+
+    function autoFillStart() {
+        const roomNo = document.getElementById("roomBill").value;
+        if (!roomNo) return;
+        
+        const r = rooms.find(x => x.room.toString() === roomNo.toString());
+        const roomBills = bills.filter(b => b.room.toString() === roomNo.toString());
+        
+        // Nếu đã có hóa đơn cũ, lấy số điện cuối của hóa đơn đó làm số đầu tháng này
+        if (roomBills.length > 0) {
+            document.getElementById("start").value = roomBills[roomBills.length - 1].end;
+        } else {
+            document.getElementById("start").value = r.electricStart;
+        }
+    }
+
+    function addBill() {
+        const month = document.getElementById("month").value.trim();
+        const roomNo = document.getElementById("roomBill").value;
+        const sVal = document.getElementById("start").value;
+        const eVal = document.getElementById("end").value;
+
+        if (!month || !roomNo || sVal === "" || eVal === "") {
+            alert("Lỗi: Vui lòng nhập Tháng, Số điện đầu và Số điện cuối!");
+            return;
+        }
+let existed = bills.find(b =>
+    b.room.toString() === roomNo.toString() &&
+    b.month === month
+);
+
+if(existed){
+    alert("Phòng này đã có hóa đơn tháng này!");
+    return;
+}
+        const start = Number(sVal);
+        const end = Number(eVal);
+
+        if (end < start) {
+            alert(`Lỗi: Số điện cuối (${end}) không thể nhỏ hơn số điện đầu (${start})!`);
+            return;
+        }
+
+        const r = rooms.find(x => x.room.toString() === roomNo.toString());
+        if (!r) return;
+
+        // Công thức tính toán
+        const electricPrice = (end - start) * 3500;
+        const waterPrice = (Number(r.people) || 0) * 100000;
+        const servicePrice = 150000;
+        const roomPrice = Number(r.price) || 0;
+        const total = roomPrice + electricPrice + waterPrice + servicePrice;
+
+        const newBill = {
+    month: month,
+    room: roomNo,
+    tenant: r.tenant,
+    price: roomPrice,
+    start: start,
+    end: end,
+    electric: electricPrice,
+    water: waterPrice,
+    service: servicePrice,
+    total: total,
+    paid:false
+};
+
+        bills.push(newBill);
+        save();
+        renderBills();
+        
+        document.getElementById("end").value = ""; 
+        alert(`Đã lưu hóa đơn tháng ${month} cho phòng ${roomNo}`);
+    }
+
+    function renderBills() {
+        let html = "";
+        const rf = document.getElementById("filterRoom").value.toLowerCase();
+        const mf = document.getElementById("filterMonth").value.toLowerCase();
+
+        bills.forEach((b, i) => {
+            if (rf && !b.room.toString().toLowerCase().includes(rf)) return;
+            if (mf && !b.month.toLowerCase().includes(mf)) return;
+
+            html += `<tr>
+                <td>${b.month}</td>
+                <td>${b.room}</td>
+                <td>${b.tenant}</td>
+                <td>${b.price.toLocaleString()}đ</td>
+                <td>${b.start} → ${b.end}</td>
+                <td>${b.electric.toLocaleString()}đ</td>
+                <td>${b.water.toLocaleString()}đ</td>
+                <td>${b.service.toLocaleString()}đ</td>
+                <td class="total-cell">${b.total.toLocaleString()}đ</td>
+<td>
+<button class="delete" onclick="deleteBill(${i})">Xóa</button>
+</td>
+            </tr>`;
+        });
+        document.getElementById("billTable").innerHTML = html;
+    }
+
+    function deleteBill(i) {
+        if(confirm("Xóa hóa đơn này khỏi lịch sử?")) {
+            bills.splice(i, 1);
+            save();
+            renderBills();
+        }
+    }
+
+    function togglePaid(i){
+
+    bills[i].paid = !bills[i].paid;
+
+    save();
+
+}
+
+    // --- LOGIC TRANG 3 ---
+function renderAllGuests() {
+
+    let html = "";
+
+    let sortedRooms = [...rooms].sort((a,b)=>
+    Number(a.room) - Number(b.room)
+);
+
+sortedRooms.forEach(r => {
+
+        const pCount = Number(r.people) || 1;
+
+        for (let i = 0; i < pCount; i++) {
+
+            let g = guests.find(x => x.room == r.room && x.index == i) || {};
+
+            html += `<tr>
+                <td><strong>${r.room}</strong></td>
+
+                <td>
+                <input id="name_${r.room}_${i}" value="${g.name || ""}">
+                </td>
+
+                <td>
+                <input type="date" id="birth_${r.room}_${i}" value="${g.birth || ""}">
+                </td>
+
+                <td>
+                <input id="cccd_${r.room}_${i}" value="${g.cccd || ""}">
+                </td>
+
+                <td>
+                <input id="addr_${r.room}_${i}" value="${g.addr || ""}">
+                </td>
+
+                <td>
+                <input id="phone_${r.room}_${i}" value="${g.phone || ""}">
+                </td>
+
+                <td>
+                <input id="note_${r.room}_${i}" value="${g.note || ""}">
+                </td>
+
+            </tr>`;
+        }
+
+    });
+
+    document.getElementById("guestTable").innerHTML = html;
+}
+
+function loadGuests() {
+
+    const roomNo = document.getElementById("roomGuest").value.trim();
+
+    if(!roomNo){
+        alert("Vui lòng nhập số phòng");
+        return;
+    }
+
+    const r = rooms.find(x => x.room.toString() === roomNo.toString());
+
+    if (!r) {
+        alert("Không tìm thấy phòng này");
+        return;
+    }
+
+    let html = "";
+
+    const pCount = Number(r.people) || 1;
+
+    for (let i = 0; i < pCount; i++) {
+
+        let g = guests.find(x => x.room == roomNo && x.index == i) || {};
+
+        html += `<tr>
+            <td><strong>${roomNo}</strong></td>
+
+            <td>
+            <input id="name_${roomNo}_${i}"
+            value="${g.name || ""}">
+            </td>
+
+            <td>
+            <input type="date"
+            id="birth_${roomNo}_${i}"
+            value="${g.birth || ""}">
+            </td>
+
+            <td>
+            <input id="cccd_${roomNo}_${i}"
+            value="${g.cccd || ""}">
+            </td>
+
+            <td>
+            <input id="addr_${roomNo}_${i}"
+            value="${g.addr || ""}">
+            </td>
+
+            <td>
+            <input id="phone_${roomNo}_${i}"
+            value="${g.phone || ""}">
+            </td>
+
+            <td>
+            <input id="note_${roomNo}_${i}"
+            value="${g.note || ""}">
+            </td>
+
+        </tr>`;
+    }
+
+    document.getElementById("guestTable").innerHTML = html;
+
+}
+    function saveGuests(){
+
+    guests = [];
+
+    rooms.forEach(r=>{
+        let pCount = Number(r.people) || 1;
+
+        for(let i=0;i<pCount;i++){
+
+            let g = {
+                room:r.room,
+                index:i,
+                name:document.getElementById(`name_${r.room}_${i}`)?.value || "",
+                birth:document.getElementById(`birth_${r.room}_${i}`)?.value || "",
+                cccd:document.getElementById(`cccd_${r.room}_${i}`)?.value || "",
+                addr:document.getElementById(`addr_${r.room}_${i}`)?.value || "",
+                phone:document.getElementById(`phone_${r.room}_${i}`)?.value || "",
+                note:document.getElementById(`note_${r.room}_${i}`)?.value || ""
+            }
+
+            guests.push(g)
+        }
+    })
+
+    save()
+
+    alert("Đã lưu thông tin người ở!")
+}
+    // 🚀 CHẠY HỆ THỐNG SAU KHI LOAD XONG TẤT CẢ
+    window.onload = function() {
+        showPage(1);
+    };
+    function exportBills(){
+
+    let data = [
+        ["Tháng","Phòng","Khách","Tiền phòng","Điện đầu","Điện cuối","Tiền điện","Tiền nước","Dịch vụ","Tổng"]
+    ]
+
+    bills.forEach(b=>{
+        data.push([
+            b.month,
+            b.room,
+            b.tenant,
+            b.price,
+            b.start,
+            b.end,
+            b.electric,
+            b.water,
+            b.service,
+            b.total
+        ])
+    })
+
+    let wb = XLSX.utils.book_new()
+    let ws = XLSX.utils.aoa_to_sheet(data)
+
+    XLSX.utils.book_append_sheet(wb,ws,"HoaDon")
+
+    XLSX.writeFile(wb,"hoa_don_phong_tro.xlsx")
+}
+
+function exportGuests(){
+
+    let data = [
+        ["Phòng","Họ tên","Ngày sinh","CCCD","Địa chỉ","SĐT","Ghi chú"]
+    ]
+
+    guests.forEach(g=>{
+        data.push([
+            g.room,
+            g.name,
+            g.birth,
+            g.cccd,
+            g.addr,
+            g.phone,
+            g.note
+        ])
+    })
+
+    let wb = XLSX.utils.book_new()
+    let ws = XLSX.utils.aoa_to_sheet(data)
+
+    XLSX.utils.book_append_sheet(wb,ws,"NguoiO")
+
+    XLSX.writeFile(wb,"danh_sach_nguoi_o.xlsx")
+}
+
+</script>
+
+</body>
+</html>
