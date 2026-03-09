@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Quản lý phòng trọ 166/41/C2 Thích Quảng Đức, Đức Nhuận, TPHCM</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -142,6 +144,22 @@ font-weight:bold;
 </div>
 
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDF6ZLRQ6NRC5qAk8anzfHvP_BqZw6Hqeg",
+  authDomain: "quanlyphongtro-d5dd2.firebaseapp.com",
+  databaseURL: "https://quanlyphongtro-d5dd2-default-rtdb.firebaseio.com",
+  projectId: "quanlyphongtro-d5dd2",
+  storageBucket: "quanlyphongtro-d5dd2.firebasestorage.app",
+  messagingSenderId: "996036932161",
+  appId: "1:996036932161:web:4e3f4cec112ce0d512ccc0",
+  measurementId: "G-78LCDX1GRN"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+
+
     // 1. Khởi tạo dữ liệu
     let rooms = JSON.parse(localStorage.getItem("rooms")) || [];
     let bills = JSON.parse(localStorage.getItem("bills")) || [];
@@ -149,10 +167,13 @@ font-weight:bold;
 
     // 2. Hàm lưu dữ liệu
     function save() {
+        db.ref("rooms").set(rooms);
+        db.ref("bills").set(bills);
+        db.ref("guests").set(guests);
         localStorage.setItem("rooms", JSON.stringify(rooms));
         localStorage.setItem("bills", JSON.stringify(bills));
         localStorage.setItem("guests", JSON.stringify(guests));
-    }
+            }
 
     // 3. Hàm chuyển trang
     function showPage(p) {
@@ -527,9 +548,29 @@ function loadGuests() {
     alert("Đã lưu thông tin người ở!")
 }
     // 🚀 CHẠY HỆ THỐNG SAU KHI LOAD XONG TẤT CẢ
-    window.onload = function() {
-        showPage(1);
-    };
+    window.onload = function(){
+
+    // tải dữ liệu rooms từ Firebase
+    db.ref("rooms").on("value", snapshot=>{
+        rooms = snapshot.val() || [];
+        renderRooms();
+        loadRoomDropdown();
+    });
+
+    // tải dữ liệu bills
+    db.ref("bills").on("value", snapshot=>{
+        bills = snapshot.val() || [];
+        renderBills();
+    });
+
+    // tải dữ liệu guests
+    db.ref("guests").on("value", snapshot=>{
+        guests = snapshot.val() || [];
+    });
+
+    showPage(1);
+
+};
     function exportBills(){
 
     let data = [
